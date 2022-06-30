@@ -1,0 +1,13 @@
+# Node.js
+node_modules
+
+# Build
+bin
+
+# IDE & Editor
+.idea
+.vscode
+
+# Misc
+.DS_Store
+*.log
