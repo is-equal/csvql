@@ -23,7 +23,7 @@ export async function executeQuery(sql: string, cwd: string): Promise<{ source: 
         process.exit(1);
     }
 
-    logger('Query %O',query);
+    logger('Query %O', query);
 
     const {table} = query.from[0];
     const [{value: offset}, {value: limit}] = query.limit;
@@ -35,6 +35,7 @@ export async function executeQuery(sql: string, cwd: string): Promise<{ source: 
     const filePath = path.join(cwd, `${table}.csv`);
     const operation = getOperation(operator);
 
+    let line = 0;
     let total = 0;
     let result: string[][] = [];
     let shouldSetupHeader = true;
@@ -44,6 +45,8 @@ export async function executeQuery(sql: string, cwd: string): Promise<{ source: 
     let headerName: Record<string, string> = {};
 
     for await (const row of readCSV(filePath)) {
+        line++;
+
         if (shouldSetupHeader) {
             originalHeader = header = row;
 
@@ -71,6 +74,10 @@ export async function executeQuery(sql: string, cwd: string): Promise<{ source: 
             shouldSetupHeader = false;
 
             continue;
+        }
+
+        if (originalHeader.length !== row.length) {
+            throw new Error(`The number of header columns are different to row columns (line: ${line})`);
         }
 
         const data = operation(row, originalHeader, left, right);
