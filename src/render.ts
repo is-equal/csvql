@@ -29,9 +29,13 @@ export function createTable(data: string[][]): string {
 
 function getColumnsRenderConfig(data: string[][]): { width: number }[] {
     const maxColumns = process.stdout.columns;
-    const columnsConfig = data[0].map((_, column) => ({
-        width: data.reduce<number>((value, item: any) => Math.max(value, item[column].toString().length), 0)
-    }));
+    const columnsConfig = data[0].map((_, column) => {
+        return ({
+            width: data.reduce<number>((value, item) => {
+                return Math.max(value, item[column].toString().length);
+            }, 0)
+        });
+    });
     const tableGaps = (columnsConfig.length - 1) * 3 + 4;
     const columnConsumed = columnsConfig.reduce((value, {width}) => value + width, tableGaps);
 
