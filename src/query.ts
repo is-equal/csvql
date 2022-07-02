@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import * as semver from 'semver';
 import debug from 'debug';
 import path from 'node:path';
 import {
@@ -7,9 +8,8 @@ import {
     type EQ_Expr,
     type LIKE_Expr,
     type OR_Expr,
-    type SQLExpr,
     type SQLColumns,
-    type NONE_Expr,
+    type SEMVER_Expr,
 } from 'node-query';
 import {readCSV} from './csv';
 
@@ -26,14 +26,27 @@ export async function executeQuery(sql: string, cwd: string): Promise<{ source: 
     logger('Query %O', query);
 
     const {table} = query.from[0];
-    const [{value: offset}, {value: limit}] = query.limit;
-    const {operator, left, right} = query.where || {operator: 'none'};
+    const [{value: offset = 0}, {value: limit = 10}] = query.limit;
     const start = offset * limit;
     const end = start + limit;
     const page = offset + 1;
-
     const filePath = path.join(cwd, `${table}.csv`);
-    const operation = getOperation(operator);
+
+    let operation: Operation;
+    let left: { column: string } | undefined;
+    let right: { value: any } | undefined;
+
+    if (query.where.operator !== undefined) {
+        left = query.where.left;
+        right = query.where.right;
+        operation = getOperation(query.where.operator);
+    } else if (query.where.type === 'function') {
+        left = query.where.args.value[0];
+        right = query.where.args.value[1];
+        operation = getOperation(query.where.name);
+    } else {
+        operation = getOperation('none');
+    }
 
     let line = 0;
     let total = 0;
@@ -129,17 +142,18 @@ function getColumnName(column: SQLColumns[number]): string {
     return column.expr.column;
 }
 
-type Operation = (data: string[], header: string[], left: SQLExpr['left'], right: SQLExpr['right']) => string[] | undefined;
-
-const SQLOperations: Record<SQLExpr['operator'], Operation> = {
+const SQLOperations = {
     'none': executeNoneOperation,
     '=': executeEqualOperation,
     'LIKE': executeLikeOperation,
     'AND': executeAndOperation,
     'OR': executeOrOperation,
+    'SEMVER': executeSemverOperation,
 };
 
-function getOperation(operator: SQLExpr['operator']) {
+type Operation = (data: string[], header: string[], left: any, right: any) => string[] | undefined;
+
+function getOperation(operator: keyof typeof SQLOperations) {
     const operation = SQLOperations[operator];
 
     if (operation === undefined) {
@@ -150,8 +164,31 @@ function getOperation(operator: SQLExpr['operator']) {
     return operation;
 }
 
-function executeNoneOperation(data: string[], header: string[], left: NONE_Expr['left'], right: NONE_Expr['right']): string[] | undefined {
+
+function executeNoneOperation(data: string[], header: string[]): string[] | undefined {
     return data;
+}
+
+function executeSemverOperation(data: string[], header: string[], left: SEMVER_Expr['args']['value']['0'], right: SEMVER_Expr['args']['value']['1']): string[] | undefined {
+    const {column: columnName} = left;
+    const {value} = right;
+    const column = header.findIndex((value) => value === columnName);
+
+
+    if (semver.valid(data[column]) === null) {
+        return;
+    }
+
+    if (
+        (typeof value === 'string' && semver.validRange(value) === null)
+        || (typeof value === 'number' && semver.coerce(value) === null)
+    ) {
+        throw new Error(chalk.red(`Invalid version or range: ${value}`));
+    }
+
+    if (semver.satisfies(data[column], String(value))) {
+        return data;
+    }
 }
 
 function executeEqualOperation(data: string[], header: string[], left: EQ_Expr['left'], right: EQ_Expr['right']): string[] | undefined {

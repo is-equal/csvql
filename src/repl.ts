@@ -16,6 +16,7 @@ export function repl(options: ReplOptions): void {
         output: process.stdout,
         prompt: chalk.cyan('> '),
         history: [
+            'SELECT app_version, user_agent FROM data WHERE SEMVER(app_version, 2) LIMIT 0,10',
             'SELECT app_version, user_agent FROM data WHERE year = 1997 AND (app_version LIKE \'0.5%\' OR app_version LIKE \'%6%\') LIMIT 0,10',
             'SELECT app_version, user_agent FROM data WHERE year = 1997 AND app_version LIKE \'0.5%\' LIMIT 0,10',
             'SELECT year as model_year, app_version, user_agent FROM data WHERE year = 1997 LIMIT 0,5',
