@@ -1,8 +1,9 @@
 import {defineConfig} from 'rollup';
-import nodeResolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import typescript from "rollup-plugin-typescript2";
-import babel from "@rollup/plugin-babel";
+import nodeResolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import typescript from 'rollup-plugin-typescript2';
+import babel from '@rollup/plugin-babel';
+import pkg from './package.json';
 
 export default defineConfig({
     input: {
@@ -17,6 +18,7 @@ export default defineConfig({
         sourcemap: true,
         exports: 'none',
     },
+    external: Object.keys(pkg.dependencies),
     plugins: [
         nodeResolve({
             preferBuiltins: true,
@@ -25,12 +27,12 @@ export default defineConfig({
         commonjs(),
         typescript(),
         babel({
-            babelHelpers: "bundled",
+            babelHelpers: 'bundled',
             presets: [['@babel/preset-env', {
-                useBuiltIns: "usage",
-                corejs: "3",
+                useBuiltIns: 'usage',
+                corejs: '3',
                 targets: 'node 12',
             }]]
         }),
     ]
-})
+});

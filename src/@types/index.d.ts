@@ -13,7 +13,13 @@ declare module 'node-query' {
 
     type SQLColumn<T> = { expr: T, as: string }
 
-    type SQLExpr = AND_Expr | OR_Expr | EQ_Expr | LIKE_Expr | NONE_Expr;
+    type SQLExpr =
+        AND_Expr
+        | OR_Expr
+        | EQ_Expr
+        | LIKE_Expr
+        | NONE_Expr
+        | SEMVER_Expr;
 
     type AND_Expr = IExpression<'AND'>;
 
@@ -24,6 +30,19 @@ declare module 'node-query' {
     type EQ_Expr = IExpression<'=', number | boolean | string>;
 
     type LIKE_Expr = IExpression<'LIKE', string>;
+
+    type SEMVER_Expr = IFnExpression<'SEMVER', number | string>;
+
+    interface IFnExpression<Name, Value> {
+        type: 'function';
+        name: Name;
+        args: {
+            value: [
+                { column: string },
+                { value: Value },
+            ];
+        };
+    }
 
     interface IExpression<Operator, Value> {
         operator: Operator;
